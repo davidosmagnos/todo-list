@@ -5,6 +5,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AddTodoReq } from './dto/add.request';
 import { ResponseUtil } from 'src/util/response.util';
 import { ErrorConstants } from 'src/util/error.constants';
+import { UpdateTodoReq } from './dto/update.request';
+import { TodoConstants } from 'src/util/todo.constants';
 
 @Injectable()
 export class TodoService {
@@ -14,20 +16,21 @@ export class TodoService {
         private todoRepository:Repository<TodoEntity>
     ){}
     private readonly logger = new Logger(TodoService.name);
+    private errorConstants = new ErrorConstants()
 
     async getTodos(){
         let list:any;
         try{
             list = await this.todoRepository.find();
             if(!list){
-                throw new Error(ErrorConstants.noTodoYet);
+                throw new Error(this.errorConstants.noTodoYet);
             }
         }catch(err){
-            this.logger.error(ErrorConstants.getMessage(this.getErrorCode(err)))
+            this.logger.error(this.errorConstants.getMessage(this.getErrorCode(err)))
             return new ResponseUtil(null,this.getErrorCode(err))
         }
        
-        return new ResponseUtil(list,ErrorConstants.success);
+        return new ResponseUtil(list,this.errorConstants.success);
     }
 
     async getOneTodoById(id:number){
@@ -39,38 +42,59 @@ export class TodoService {
                 }
             })
             if(!oneTodo){
-                throw new Error(ErrorConstants.todoNotExist)
+                throw new Error(this.errorConstants.todoNotExist)
             }
             this.logger.log(JSON.stringify(oneTodo))
         }catch(err){
-            this.logger.error(ErrorConstants.getMessage(this.getErrorCode(err)))
+            this.logger.error(this.errorConstants.getMessage(this.getErrorCode(err)))
             return new ResponseUtil(null,this.getErrorCode(err))
         }
-        return new ResponseUtil(oneTodo,ErrorConstants.success)
+        return new ResponseUtil(oneTodo,this.errorConstants.success)
     }
 
     async addTodo(req:AddTodoReq){
         try{
             if(!req || JSON.stringify(req) == '{}'){
-                throw new Error(ErrorConstants.reqEmpty);
+                throw new Error(this.errorConstants.reqEmpty);
             }
             else if(!req.toDoTitle){
-                throw new Error(ErrorConstants.titleNotProvided)
+                throw new Error(this.errorConstants.titleNotProvided)
             }
             const todo = this.todoRepository.create({
                 todo_title:req.toDoTitle||"-",
                 todo_desc:req.toDoDesc||"-",
-                todo_status:1 //TODO: create constant
+                todo_status:TodoConstants.TODO_STATUS_ACTIVE
            })
            await this.todoRepository.save(todo)
-           return new ResponseUtil(null,ErrorConstants.success)
+           return new ResponseUtil(null,this.errorConstants.success)
         }catch(err){
-            this.logger.error(ErrorConstants.getMessage(this.getErrorCode(err)))
+            this.logger.error(this.errorConstants.getMessage(this.getErrorCode(err)))
             return new ResponseUtil(null,this.getErrorCode(err))
         }
     }
     getErrorCode(err){
         let er = err.toString();
         return er.substring(er.indexOf('0'))
+    }
+
+    async updateTodo(req:UpdateTodoReq){
+        try{
+            if(!req || JSON.stringify(req) == '{}'){
+                throw new Error(this.errorConstants.reqEmpty);
+            }
+            else if(!req.toDoTitle){
+                throw new Error(this.errorConstants.titleNotProvided)
+            }
+            const todo = this.todoRepository.create({
+                todo_title:req.toDoTitle||"-",
+                todo_desc:req.toDoDesc||"-",
+                todo_status:TodoConstants.TODO_STATUS_ACTIVE
+           })
+           await this.todoRepository.update(req.code,todo)
+           return new ResponseUtil(null,this.errorConstants.success)
+        }catch(err){
+            this.logger.error(this.errorConstants.getMessage(this.getErrorCode(err)))
+            return new ResponseUtil(null,this.getErrorCode(err))
+        }
     }
 }
