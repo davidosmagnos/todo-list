@@ -18,10 +18,15 @@ export class TodoService {
     private readonly logger = new Logger(TodoService.name);
     private errorConstants = new ErrorConstants()
 
-    async getTodos(){
+    async getTodos(filter = null){
         let list:any;
         try{
-            list = await this.todoRepository.find();
+            this.logger.log(`filter => ${filter}`)
+            if(filter){
+                list = await this.todoRepository.find({where:{todo_status:filter}})
+            }else{
+                list = await this.todoRepository.find()
+            }
             if(!list){
                 throw new Error(this.errorConstants.noTodoYet);
             }
@@ -92,6 +97,56 @@ export class TodoService {
            })
            await this.todoRepository.update(req.code,todo)
            return new ResponseUtil(null,this.errorConstants.success)
+        }catch(err){
+            this.logger.error(this.errorConstants.getMessage(this.getErrorCode(err)))
+            return new ResponseUtil(null,this.getErrorCode(err))
+        }
+    }
+
+    async markDone(id:number){
+        let oneTodo:any;
+        try{
+            if(!id){
+                throw new Error(this.errorConstants.reqEmpty);
+            }
+            oneTodo = await this.todoRepository.findOne({
+                where:{
+                    todo_id:id
+                }
+            })
+            if(!oneTodo){
+                throw new Error(this.errorConstants.todoNotExist)
+            }
+            const done = this.todoRepository.create({
+                todo_status:TodoConstants.TODO_STATUS_DONE
+            })
+            await this.todoRepository.update(id,done)
+            return new ResponseUtil(null,this.errorConstants.success)
+        }catch(err){
+            this.logger.error(this.errorConstants.getMessage(this.getErrorCode(err)))
+            return new ResponseUtil(null,this.getErrorCode(err))
+        }
+    }
+
+    async markArchived(id:number){
+        let oneTodo:any;
+        try{
+            if(!id){
+                throw new Error(this.errorConstants.reqEmpty);
+            }
+            oneTodo = await this.todoRepository.findOne({
+                where:{
+                    todo_id:id
+                }
+            })
+            if(!oneTodo){
+                throw new Error(this.errorConstants.todoNotExist)
+            }
+            const done = this.todoRepository.create({
+                todo_status:TodoConstants.TODO_STATUS_ARCHIVED
+            })
+            await this.todoRepository.update(id,done)
+            return new ResponseUtil(null,this.errorConstants.success)
         }catch(err){
             this.logger.error(this.errorConstants.getMessage(this.getErrorCode(err)))
             return new ResponseUtil(null,this.getErrorCode(err))
